@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+
+# Vite
+.vite/
+
+# Editor
+.DS_Store
+*.swp
