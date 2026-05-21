@@ -14,7 +14,7 @@ import EmergencyRequests from './pages/EmergencyRequests';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
-import NotFound from './pages/NotFound';
+import ForgotPassword from './pages/ForgotPassword';
 
 function Layout({ children }) {
   return (
@@ -41,6 +41,7 @@ export default function App() {
           />
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/about" element={<Layout><About /></Layout>} />
