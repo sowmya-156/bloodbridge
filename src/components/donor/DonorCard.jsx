@@ -1,14 +1,13 @@
 // src/components/donor/DonorCard.jsx
-// Displays individual donor with verification badge and completion bar
 import { motion } from 'framer-motion';
 import {
   FiPhone, FiMapPin, FiCalendar, FiUser,
-  FiCheckCircle, FiXCircle, FiAward, FiShield, FiStar,
+  FiCheckCircle, FiXCircle, FiAward, FiShield, FiNavigation,
 } from 'react-icons/fi';
 import { BLOOD_GROUP_COLORS } from '../../utils/constants';
 import { computeDonorScore } from '../../utils/donorScoring';
+import { formatDistance } from '../../utils/distance';
 
-// Verification badge component
 function VerificationBadge({ tier }) {
   if (tier === 'full') return (
     <div className="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold border border-green-200 dark:border-green-800">
@@ -23,12 +22,28 @@ function VerificationBadge({ tier }) {
   return null;
 }
 
+function DistanceBadge({ distanceKm }) {
+  if (distanceKm === null || distanceKm === undefined) return null;
+  const color = distanceKm <= 5
+    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
+    : distanceKm <= 15
+    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
+  return (
+    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${color}`}>
+      <FiNavigation size={11} /> {formatDistance(distanceKm)}
+    </div>
+  );
+}
+
 export default function DonorCard({ donor, index = 0, showBadge = true }) {
   const bgColor = BLOOD_GROUP_COLORS[donor.bloodGroup] || 'bg-gray-100 text-gray-700 border-gray-300';
   const { percentage, tier } = computeDonorScore(donor);
 
   const lastDonation = donor.lastDonationDate
-    ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      })
     : 'N/A';
 
   const tierBorder = tier === 'full'
@@ -50,10 +65,8 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
       transition={{ delay: index * 0.05 }}
       className={`card-hover bg-white dark:bg-gray-900 rounded-2xl border ${tierBorder} p-5 shadow-sm relative overflow-hidden`}
     >
-      {/* Top tier indicator bar */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${tierTopBar}`} />
 
-      {/* Header */}
       <div className="flex items-start justify-between mb-3 pt-1">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
@@ -69,14 +82,11 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         </div>
       </div>
 
-      {/* Verification badge */}
-      {showBadge && tier !== 'basic' && (
-        <div className="mb-3">
-          <VerificationBadge tier={tier} />
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {showBadge && <VerificationBadge tier={tier} />}
+        <DistanceBadge distanceKm={donor.distanceKm} />
+      </div>
 
-      {/* Details */}
       <div className="space-y-2 mb-3">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <FiMapPin size={13} className="text-red-500 shrink-0" />
@@ -92,7 +102,6 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         </div>
       </div>
 
-      {/* Profile completion bar (only for verified donors) */}
       {tier !== 'basic' && (
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
@@ -100,15 +109,12 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{percentage}%</span>
           </div>
           <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
-            <div
-              className={`h-1.5 rounded-full transition-all ${tier === 'full' ? 'bg-green-500' : 'bg-yellow-500'}`}
-              style={{ width: `${percentage}%` }}
-            />
+            <div className={`h-1.5 rounded-full ${tier === 'full' ? 'bg-green-500' : 'bg-yellow-500'}`}
+              style={{ width: `${percentage}%` }} />
           </div>
         </div>
       )}
 
-      {/* Availability */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
         <div className={`flex items-center gap-1.5 text-xs font-medium ${
           donor.isAvailable ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
@@ -119,7 +125,7 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         </div>
         {donor.isAvailable && (
           <a href={`tel:${donor.phone}`}
-            className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition-colors">
+            className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
             Contact
           </a>
         )}

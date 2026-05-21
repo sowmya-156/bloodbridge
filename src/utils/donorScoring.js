@@ -1,41 +1,25 @@
 // src/utils/donorScoring.js
-// Logic for computing verification tier, profile completion %, and smart sorting
-
-/**
- * Calculate profile completion percentage and verification tier.
- * Tiers: 'full' | 'partial' | 'basic'
- */
 export const computeDonorScore = (donor) => {
   let score = 0;
   let total = 0;
 
-  // ── Step 2: previous donation ──────────────────────────
   total += 20;
-  const hasDonationAnswer = donor.hasDonatedBefore !== undefined && donor.hasDonatedBefore !== null && donor.hasDonatedBefore !== '';
-  if (hasDonatedBefore(donor)) score += 20; // Yes = full credit
-  else if (hasDonationAnswer) score += 10;  // No = partial credit (still answered)
+  const hasDonationAnswer = donor.hasDonatedBefore !== undefined &&
+    donor.hasDonatedBefore !== null && donor.hasDonatedBefore !== '';
+  if (donor.hasDonatedBefore === 'yes' || donor.hasDonatedBefore === true) score += 20;
+  else if (hasDonationAnswer) score += 10;
 
-  // ── Step 3: eligibility checklist ─────────────────────
-  const checklistItems = [
-    'eligAgeOk',
-    'eligWeightOk',
-    'eligHemoglobinOk',
-    'eligNotDonatedRecently',
-    'eligNoAlcohol',
-  ];
-  const perItem = 80 / checklistItems.length; // 80 points total for checklist
+  const checklistItems = ['eligAgeOk','eligWeightOk','eligHemoglobinOk','eligNotDonatedRecently','eligNoAlcohol'];
+  const perItem = 80 / checklistItems.length;
   checklistItems.forEach((key) => {
     total += perItem;
     if (donor[key] === true) score += perItem;
   });
 
   const percentage = Math.round((score / total) * 100);
-
-  // ── Tier logic ─────────────────────────────────────────
   const allChecklist = checklistItems.every((k) => donor[k] === true);
-  const donatedBefore = hasDonatedBefore(donor);
+  const donatedBefore = donor.hasDonatedBefore === 'yes' || donor.hasDonatedBefore === true;
   const anyChecklist = checklistItems.some((k) => donor[k] === true);
-  const skippedAll = !hasDonationAnswer && !anyChecklist;
 
   let tier = 'basic';
   if (donatedBefore && allChecklist) tier = 'full';
@@ -44,18 +28,24 @@ export const computeDonorScore = (donor) => {
   return { percentage, tier };
 };
 
-const hasDonatedBefore = (donor) => donor.hasDonatedBefore === 'yes' || donor.hasDonatedBefore === true;
-
-/**
- * Sort donors by tier priority then profile completion.
- * Returns { fullyVerified, partiallyVerified, normal }
- */
 export const categorizeDonors = (donors) => {
   const scored = donors.map((d) => ({ ...d, ...computeDonorScore(d) }));
 
-  const fullyVerified   = scored.filter((d) => d.tier === 'full').sort((a, b) => b.percentage - a.percentage);
-  const partiallyVerified = scored.filter((d) => d.tier === 'partial').sort((a, b) => b.percentage - a.percentage);
-  const normal          = scored.filter((d) => d.tier === 'basic');
+  const sortByDistanceThenScore = (a, b) => {
+    if (a.distanceKm !== null && a.distanceKm !== undefined &&
+        b.distanceKm !== null && b.distanceKm !== undefined) {
+      if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+    }
+    if (a.distanceKm !== null && a.distanceKm !== undefined &&
+        (b.distanceKm === null || b.distanceKm === undefined)) return -1;
+    if (b.distanceKm !== null && b.distanceKm !== undefined &&
+        (a.distanceKm === null || a.distanceKm === undefined)) return 1;
+    return b.percentage - a.percentage;
+  };
+
+  const fullyVerified = scored.filter((d) => d.tier === 'full').sort(sortByDistanceThenScore);
+  const partiallyVerified = scored.filter((d) => d.tier === 'partial').sort(sortByDistanceThenScore);
+  const normal = scored.filter((d) => d.tier === 'basic').sort(sortByDistanceThenScore);
 
   return { fullyVerified, partiallyVerified, normal };
 };

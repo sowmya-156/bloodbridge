@@ -89,8 +89,9 @@ function CompletionBar({ donor }) {
 
 // ── STEP 1: Basic Info ────────────────────────────────────────────
 function Step1({ form, setForm, errors, onNext, submitting, existingDonorId }) {
-  const { city: detectedCity, loading: geoLoading, detectLocation } = useGeolocation();
+  const { city: detectedCity, coords: detectedCoords, loading: geoLoading, detectLocation } = useGeolocation();
   useEffect(() => { if (detectedCity) setForm((p) => ({ ...p, city: detectedCity })); }, [detectedCity]);
+  useEffect(() => { if (detectedCoords) setForm((p) => ({ ...p, lat: detectedCoords.lat, lng: detectedCoords.lng })); }, [detectedCoords]);
 
   const handle = (field) => (e) =>
     setForm((p) => ({ ...p, [field]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -378,6 +379,7 @@ export default function RegisterDonor() {
     lastDonationDate: '', isAvailable: true,
     // Step 2
     hasDonatedBefore: '',
+    lat: null, lng: null,
     // Step 3
     eligAgeOk: false, eligWeightOk: false, eligHemoglobinOk: false,
     eligNotDonatedRecently: false, eligNoAlcohol: false,
