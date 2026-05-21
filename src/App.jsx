@@ -14,6 +14,7 @@ import EmergencyRequests from './pages/EmergencyRequests';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import NotFound from './pages/NotFound';
 import ForgotPassword from './pages/ForgotPassword';
 
 function Layout({ children }) {
