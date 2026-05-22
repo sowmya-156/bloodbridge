@@ -15,6 +15,7 @@ import { computeDonorScore } from '../utils/donorScoring';
 import { logoutUser } from '../services/authService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { useLiveLocation } from '../hooks/useLiveLocation';
 
 // Verification badge
 function TierBadge({ tier }) {
@@ -96,7 +97,7 @@ export default function Dashboard() {
   };
 
   const handleLogout = async () => { await logoutUser(); navigate('/'); };
-
+  useLiveLocation(donor);
   if (loading) return <LoadingSpinner fullScreen />;
 
   const bloodColor = donor ? BLOOD_GROUP_COLORS[donor.bloodGroup] || 'bg-gray-100 text-gray-700' : '';
