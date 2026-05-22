@@ -183,7 +183,13 @@ export default function SearchDonors() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleSearch} disabled={loading}
+            <button onClick={handleSearch} disabled={loading || (!city && !patientCoords)}
+            {!city && !patientCoords && (
+              <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                <FiAlertCircle size={11} />
+                Please enter your city or use live location to see distances
+               </p>
+            )}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-8 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl transition-all shadow-md">
               <FiSearch size={16} />
               {loading ? 'Searching...' : 'Search Donors'}

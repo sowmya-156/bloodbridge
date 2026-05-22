@@ -84,13 +84,17 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
 
       <div className="flex flex-wrap gap-2 mb-3">
         {showBadge && <VerificationBadge tier={tier} />}
-        <DistanceBadge distanceKm={donor.distanceKm} />
       </div>
 
       <div className="space-y-2 mb-3">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <FiMapPin size={13} className="text-red-500 shrink-0" />
           <span>{donor.city}</span>
+          {donor.distanceKm !== null && donor.distanceKm !== undefined && (
+            <span className="ml-auto text-xs font-semibold text-blue-600 dark:text-blue-400">
+            📍 {donor.distanceKm} km away
+            </span>
+         )}
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <FiPhone size={13} className="text-red-500 shrink-0" />
