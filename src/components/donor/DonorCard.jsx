@@ -88,22 +88,20 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
 
       <div className="space-y-2 mb-3">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <FiMapPin size={13} className="text-red-500 shrink-0" />
-          <span>{donor.city}</span>
-          {donor.distanceKm !== null && donor.distanceKm !== undefined && (
-            <span className="ml-auto text-xs font-semibold text-blue-600 dark:text-blue-400">
-            📍 {donor.distanceKm} km away
-            </span>
-         )}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <FiPhone size={13} className="text-red-500 shrink-0" />
           <span>{donor.phone}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <FiCalendar size={13} className="text-red-500 shrink-0" />
-          <span>Last donated: {lastDonation}</span>
-        </div>
+        {donor.distanceKm !== null && donor.distanceKm !== undefined ? (
+          <div className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
+            <FiNavigation size={13} className="shrink-0" />
+            <span>{donor.distanceKm} km away from your hospital</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <FiMapPin size={13} className="text-red-500 shrink-0" />
+            <span>{donor.city}</span>
+          </div>
+        )}
       </div>
 
       {tier !== 'basic' && (
