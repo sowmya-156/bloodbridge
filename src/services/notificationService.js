@@ -6,7 +6,7 @@ import { getDistanceKm, geocodeCity } from '../utils/distance';
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-const NOTIFY_RADIUS_KM = 11;
+const NOTIFY_RADIUS_KM = 500; // temporarily large for testing
 
 const getDonorCoords = async (donor) => {
   if (donor.isLiveLocationActive && donor.liveLat && donor.liveLng) {
@@ -66,6 +66,8 @@ const isCompatible = (donorGroup, neededGroup) => {
 export const notifyNearbyDonors = async (request) => {
   try {
     const hospitalCoords = await getHospitalCoords(request);
+    console.log('Hospital coords:', hospitalCoords);
+    console.log('Request:', request);
     if (!hospitalCoords) return { notified: 0, skipped: 0 };
 
     const allDonors = await getAllDonors();
