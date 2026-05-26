@@ -6,7 +6,7 @@ import { getDistanceKm, geocodeCity } from '../utils/distance';
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-const NOTIFY_RADIUS_KM = 500; // temporarily large for testing
+const NOTIFY_RADIUS_KM = 11; 
 
 const getDonorCoords = async (donor) => {
   if (donor.isLiveLocationActive && donor.liveLat && donor.liveLng) {
