@@ -1,5 +1,6 @@
 // src/pages/EmergencyRequests.jsx
 // View all emergency blood requests and create new ones
+import { notifyNearbyDonors } from '../services/notificationService';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiAlertTriangle, FiPlus, FiX, FiPhone, FiMapPin, FiUser, FiDroplet } from 'react-icons/fi';
@@ -15,6 +16,7 @@ import { Link } from 'react-router-dom';
 const EMPTY_FORM = {
   patientName: '', bloodGroup: '', hospitalName: '',
   city: '', contactNumber: '', urgency: 'High', additionalInfo: '',
+  hospitalLat: null, hospitalLng: null,
 };
 
 export default function EmergencyRequests() {
@@ -57,10 +59,20 @@ export default function EmergencyRequests() {
       setShowForm(false);
       setErrors({});
       toast.success('Emergency request posted!');
+
+      // Notify nearby donors
+      toast.loading('Notifying nearby donors...', { id: 'notify' });
+      const { notified } = await notifyNearbyDonors(form);
+      toast.dismiss('notify');
+      if (notified > 0) {
+        toast.success(`📧 ${notified} nearby donor${notified > 1 ? 's' : ''} notified by email!`);
+      } else {
+        toast('No donors found within 11km to notify.', { icon: 'ℹ️' });
+      }
     } catch {
       toast.error('Failed to post request. Please try again.');
     } finally {
-      setSubmitting(false);
+     setSubmitting(false);
     }
   };
 
