@@ -154,7 +154,7 @@ export default function HospitalPicker({ onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
@@ -237,7 +237,7 @@ export default function HospitalPicker({ onSelect, onClose }) {
 
         {/* Map */}
         <div className="flex-1 min-h-0 p-4">
-          <div className="h-64 sm:h-80 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="h-48 sm:h-56 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
             <MapContainer
               center={[mapCenter.lat, mapCenter.lng]}
               zoom={5}
@@ -296,50 +296,4 @@ export default function HospitalPicker({ onSelect, onClose }) {
       </div>
     </div>
   );
-}
-// src/components/common/HospitalPicker.jsx
-// OpenStreetMap hospital location picker with search
-import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
-import { FiSearch, FiMapPin, FiX, FiNavigation, FiCheck } from 'react-icons/fi';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix Leaflet default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-// Custom red marker for hospital
-const hospitalIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-// Component to handle map click and move marker
-function MapClickHandler({ onLocationSelect }) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
-// Component to fly map to new location
-function MapFlyTo({ coords }) {
-  const map = useMap();
-  useEffect(() => {
-    if (coords) {
-      map.flyTo([coords.lat, coords.lng], 15, { duration: 1.5 });
-    }
-  }, [coords, map]);
-  return null;
 }
