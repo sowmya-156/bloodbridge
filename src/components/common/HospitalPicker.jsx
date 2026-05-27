@@ -203,6 +203,14 @@ export default function HospitalPicker({ onSelect, onClose }) {
             </button>
           </div>
 
+          {/* Tip for when hospital not found */}
+          {searchQuery.length >= 3 && searchResults.length === 0 && !searching && (
+            <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
+              <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold mb-1">🏥 Hospital not found in search?</p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-500 leading-relaxed"><strong>Step 1:</strong> Search your city name to navigate there on the map<br/><strong>Step 2:</strong> Click exactly where your hospital is on the map<br/><strong>Step 3:</strong> A red pin will appear — click "Use This Location"</p>
+            </div>
+          )}
+
           {/* Search results dropdown */}
           {searchResults.length > 0 && (
             <div className="mt-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden max-h-48 overflow-y-auto">
@@ -254,7 +262,7 @@ export default function HospitalPicker({ onSelect, onClose }) {
             </MapContainer>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 text-center">
-            💡 Click anywhere on the map to set a custom location
+            💡 Can't find your hospital in search? <strong>Click directly on the map</strong> where your hospital is located and a pin will drop there!
           </p>
         </div>
 
