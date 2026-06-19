@@ -2,11 +2,12 @@
 import emailjs from '@emailjs/browser';
 import { getAllDonors } from './donorService';
 import { getDistanceKm, geocodeCity } from '../utils/distance';
+import { COMPATIBLE_DONORS_FOR } from '../utils/donorScoring';
 
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-const NOTIFY_RADIUS_KM = 11; 
+const NOTIFY_RADIUS_KM = 11;
 
 const getDonorCoords = async (donor) => {
   if (donor.isLiveLocationActive && donor.liveLat && donor.liveLng) {
@@ -49,31 +50,20 @@ const sendEmailToDonor = async (donor, request, distanceKm) => {
   }
 };
 
+// Uses the shared compatibility map (same logic as search page)
 const isCompatible = (donorGroup, neededGroup) => {
-  const compatibility = {
-    'O-': ['A+','A-','B+','B-','AB+','AB-','O+','O-'],
-    'O+': ['A+','B+','AB+','O+'],
-    'A-': ['A+','A-','AB+','AB-'],
-    'A+': ['A+','AB+'],
-    'B-': ['B+','B-','AB+','AB-'],
-    'B+': ['B+','AB+'],
-    'AB-': ['AB+','AB-'],
-    'AB+': ['AB+'],
-  };
-  return compatibility[donorGroup]?.includes(neededGroup) || false;
+  return COMPATIBLE_DONORS_FOR[neededGroup]?.includes(donorGroup) || false;
 };
 
 export const notifyNearbyDonors = async (request) => {
   try {
     const hospitalCoords = await getHospitalCoords(request);
-    console.log('Hospital coords:', hospitalCoords);
-    console.log('Request:', request);
     if (!hospitalCoords) return { notified: 0, skipped: 0 };
 
     const allDonors = await getAllDonors();
+    // Includes both exact match AND blood-compatible donors (e.g. O- for O+ request)
     const matchingDonors = allDonors.filter((d) =>
-      d.isAvailable && d.email &&
-      (d.bloodGroup === request.bloodGroup || isCompatible(d.bloodGroup, request.bloodGroup))
+      d.isAvailable && d.email && isCompatible(d.bloodGroup, request.bloodGroup)
     );
 
     let notified = 0, skipped = 0;

@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fi';
 import { searchDonors } from '../services/donorService';
 import { BLOOD_GROUPS, SAMPLE_DONORS } from '../utils/constants';
-import { categorizeDonors } from '../utils/donorScoring';
+import { categorizeDonors, COMPATIBLE_DONORS_FOR } from '../utils/donorScoring';
 import { getDistanceKm, geocodeCity, getCurrentPosition } from '../utils/distance';
 import DonorCard from '../components/donor/DonorCard';
 import SkeletonCard from '../components/common/SkeletonCard';
@@ -71,6 +71,7 @@ function PartiallyVerifiedSection({ donors }) {
 
 export default function SearchDonors() {
   const [bloodGroup, setBloodGroup] = useState('');
+  const [includeCompatible, setIncludeCompatible] = useState(true);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [categorized, setCategorized] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -79,9 +80,8 @@ export default function SearchDonors() {
   const [recommendedCollapsed, setRecommendedCollapsed] = useState(false);
   const [normalCollapsed, setNormalCollapsed] = useState(false);
 
-  // Hospital / patient location
   const [showMapPicker, setShowMapPicker] = useState(false);
-  const [patientLocation, setPatientLocation] = useState(null); // { lat, lng, name }
+  const [patientLocation, setPatientLocation] = useState(null);
   const [detectingLive, setDetectingLive] = useState(false);
 
   const handleHospitalSelect = (location) => {
@@ -93,9 +93,7 @@ export default function SearchDonors() {
     setDetectingLive(true);
     try {
       const coords = await getCurrentPosition();
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json`
-      );
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json`);
       const data = await res.json();
       const name = data.address?.amenity || data.address?.road || 'My Live Location';
       setPatientLocation({ lat: coords.lat, lng: coords.lng, name });
@@ -108,65 +106,55 @@ export default function SearchDonors() {
 
   const attachDistances = async (donors, patCoords) => {
     if (!patCoords) return donors.map((d) => ({ ...d, distanceKm: null }));
-  
-    const results = [];
-    for (const d of donors) {
-      // 1. Use live location if active and updated within last 5 mins
-      if (d.isLiveLocationActive && d.liveLat && d.liveLng) {
-        const updatedAt = d.liveLocationUpdatedAt ? new Date(d.liveLocationUpdatedAt) : null;
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        if (updatedAt && updatedAt > fiveMinutesAgo) {
-          results.push({
-            ...d,
-            distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.liveLat, d.liveLng),
-            usingLiveLocation: true,
-          });
-          continue;
-        }
-      }
-
-      // 2. Fall back to registered home location
+    return await Promise.all(donors.map(async (d) => {
       if (d.lat && d.lng) {
-        results.push({
-          ...d,
-          distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.lat, d.lng),
-          usingLiveLocation: false,
-        });
-        continue;
+        return { ...d, distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.lat, d.lng) };
       }
-
-      // 3. Fall back to geocoded city
       if (d.city) {
         const donorCoords = await geocodeCity(d.city);
-        if (donorCoords) {
-          results.push({
-            ...d,
-            distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, donorCoords.lat, donorCoords.lng),
-            usingLiveLocation: false,
-          });
-          continue;
-        }
+        if (donorCoords) return { ...d, distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, donorCoords.lat, donorCoords.lng) };
       }
-
-      results.push({ ...d, distanceKm: null, usingLiveLocation: false });
-    }
-    return results;
+      return { ...d, distanceKm: null };
+    }));
   };
 
   const handleSearch = async () => {
     setLoading(true);
     setSearched(true);
     try {
-      let results = await searchDonors({ bloodGroup, city: '', availableOnly });
+      // Determine which blood groups to fetch
+      let groupsToFetch = [bloodGroup];
+      if (bloodGroup && includeCompatible) {
+        groupsToFetch = COMPATIBLE_DONORS_FOR[bloodGroup] || [bloodGroup];
+      }
+
+      let results = [];
+      if (!bloodGroup) {
+        results = await searchDonors({ bloodGroup: '', city: '', availableOnly });
+      } else {
+        // Fetch donors for each compatible group and merge (dedupe by id)
+        const seen = new Map();
+        for (const grp of groupsToFetch) {
+          const groupResults = await searchDonors({ bloodGroup: grp, city: '', availableOnly });
+          groupResults.forEach((d) => seen.set(d.id, d));
+        }
+        results = Array.from(seen.values());
+      }
+
+      // Fallback to sample data
       if (results.length === 0) {
         results = SAMPLE_DONORS.filter((d) => {
-          if (bloodGroup && d.bloodGroup !== bloodGroup) return false;
+          if (bloodGroup) {
+            const allowedGroups = includeCompatible ? (COMPATIBLE_DONORS_FOR[bloodGroup] || [bloodGroup]) : [bloodGroup];
+            if (!allowedGroups.includes(d.bloodGroup)) return false;
+          }
           if (availableOnly && !d.isAvailable) return false;
           return true;
         });
       }
+
       const withDistances = await attachDistances(results, patientLocation);
-      const cats = categorizeDonors(withDistances);
+      const cats = categorizeDonors(withDistances, bloodGroup);
       setCategorized(cats);
       setTotalCount(results.length);
     } catch {
@@ -178,7 +166,7 @@ export default function SearchDonors() {
   };
 
   const handleReset = () => {
-    setBloodGroup(''); setAvailableOnly(false);
+    setBloodGroup(''); setAvailableOnly(false); setIncludeCompatible(true);
     setCategorized(null); setSearched(false); setTotalCount(0);
     setPatientLocation(null);
     setRecommendedCollapsed(false); setNormalCollapsed(false);
@@ -186,35 +174,30 @@ export default function SearchDonors() {
 
   const recommendedCount = categorized ? categorized.fullyVerified.length + categorized.partiallyVerified.length : 0;
   const normalCount = categorized ? categorized.normal.length : 0;
+  const exactCount = categorized ? [...categorized.fullyVerified, ...categorized.partiallyVerified, ...categorized.normal].filter(d => d.isExactBloodMatch).length : 0;
+  const compatibleCount = totalCount - exactCount;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
       <div className="max-w-6xl mx-auto">
 
-        {/* Hospital Picker Modal */}
         {showMapPicker && (
-          <HospitalPicker
-            onSelect={handleHospitalSelect}
-            onClose={() => setShowMapPicker(false)}
-          />
+          <HospitalPicker onSelect={handleHospitalSelect} onClose={() => setShowMapPicker(false)} />
         )}
 
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-red-600 rounded-2xl mb-4 shadow-lg">
             <FiSearch size={24} className="text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Find Blood Donors</h1>
-          <p className="text-gray-500 dark:text-gray-400">Smart recommendations sorted by distance from your hospital.</p>
+          <p className="text-gray-500 dark:text-gray-400">Smart recommendations including blood-compatible donors, sorted by distance.</p>
         </motion.div>
 
-        {/* Search Form */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 mb-8"
         >
-          {/* Blood Group + Available Only */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">Blood Group Needed</label>
               <div className="relative">
@@ -234,34 +217,44 @@ export default function SearchDonors() {
             </div>
           </div>
 
-          {/* Hospital / Patient Location */}
+          {/* Compatible donors toggle - only shows when blood group selected */}
+          {bloodGroup && (
+            <div className="mb-5 p-3.5 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={includeCompatible} onChange={(e) => setIncludeCompatible(e.target.checked)}
+                  className="w-4 h-4 accent-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                    Also show blood-compatible donors
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">
+                    e.g. for {bloodGroup} requests, also include: {(COMPATIBLE_DONORS_FOR[bloodGroup] || []).filter(g => g !== bloodGroup).join(', ') || 'none — only exact match available'}
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+
           <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 mb-5">
             <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <FiMapPin size={12} /> Hospital / Patient Location
             </p>
 
             {patientLocation ? (
-              // Selected location display
               <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 mb-3">
                 <FiMapPin size={16} className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-green-700 dark:text-green-400 truncate">{patientLocation.name}</p>
-                  <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
-                    {patientLocation.lat.toFixed(5)}, {patientLocation.lng.toFixed(5)}
-                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">{patientLocation.lat.toFixed(5)}, {patientLocation.lng.toFixed(5)}</p>
                 </div>
-                <button onClick={() => setPatientLocation(null)}
-                  className="text-green-500 hover:text-red-500 transition-colors shrink-0">
+                <button onClick={() => setPatientLocation(null)} className="text-green-500 hover:text-red-500 transition-colors shrink-0">
                   <FiX size={16} />
                 </button>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Select your hospital location to see how far each donor is.
-              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Select your hospital location to see how far each donor is.</p>
             )}
 
-            {/* Location action buttons */}
             <div className="flex gap-2">
               <button onClick={() => setShowMapPicker(true)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl transition-colors text-sm shadow-sm">
@@ -277,13 +270,11 @@ export default function SearchDonors() {
 
             {!patientLocation && (
               <p className="text-xs text-orange-500 dark:text-orange-400 mt-2 flex items-center gap-1">
-                <FiAlertCircle size={11} />
-                Select a location to see distances to donors
+                <FiAlertCircle size={11} /> Select a location to see distances to donors
               </p>
             )}
           </div>
 
-          {/* Search + Reset */}
           <div className="flex gap-3">
             <button onClick={handleSearch} disabled={loading}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-8 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl transition-all shadow-md">
@@ -299,12 +290,10 @@ export default function SearchDonors() {
           </div>
         </motion.div>
 
-        {/* Results */}
         {loading ? (
           <div>
             <div className="flex items-center gap-2 mb-4 text-sm text-gray-500 dark:text-gray-400">
-              <FiNavigation size={14} className="animate-spin text-red-500" />
-              Calculating distances from hospital to donors...
+              <FiNavigation size={14} className="animate-spin text-red-500" /> Calculating distances...
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
@@ -313,42 +302,36 @@ export default function SearchDonors() {
         ) : searched && categorized ? (
           totalCount > 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              {/* Summary */}
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Found <span className="font-bold text-gray-900 dark:text-white">{totalCount}</span> donor{totalCount !== 1 ? 's' : ''}
-                  {bloodGroup && <> with <span className="font-bold text-red-600">{bloodGroup}</span></>}
-                  {patientLocation && (
-                    <> near <span className="font-bold text-red-600">{patientLocation.name}</span>
-                      <span className="text-green-600 dark:text-green-400 font-medium"> · sorted by distance</span>
-                    </>
-                  )}
+                  {bloodGroup && <> for <span className="font-bold text-red-600">{bloodGroup}</span></>}
+                  {patientLocation && <> near <span className="font-bold text-red-600">{patientLocation.name}</span></>}
                 </p>
                 <div className="flex gap-2 flex-wrap">
+                  {bloodGroup && exactCount > 0 && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold border border-red-200 dark:border-red-800">
+                      <FiDroplet size={11} /> {exactCount} Exact Match
+                    </span>
+                  )}
+                  {bloodGroup && compatibleCount > 0 && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold border border-blue-200 dark:border-blue-800">
+                      <FiDroplet size={11} /> {compatibleCount} Compatible
+                    </span>
+                  )}
                   {categorized.fullyVerified.length > 0 && (
                     <span className="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold border border-green-200 dark:border-green-800">
                       <FiAward size={11} /> {categorized.fullyVerified.length} Fully Verified
                     </span>
                   )}
-                  {categorized.partiallyVerified.length > 0 && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold border border-yellow-200 dark:border-yellow-800">
-                      <FiShield size={11} /> {categorized.partiallyVerified.length} Partial
-                    </span>
-                  )}
-                  {categorized.normal.length > 0 && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-700">
-                      <FiUsers size={11} /> {categorized.normal.length} Basic
-                    </span>
-                  )}
                 </div>
               </div>
 
-              {/* Highly Recommended */}
               {recommendedCount > 0 && (
                 <div className="mb-8">
                   <SectionHeader
                     icon={FiStar} title="Highly Recommended Donors" count={recommendedCount}
-                    description={patientLocation ? "Verified donors · sorted nearest to your hospital" : "Verified donors with completed health profiles"}
+                    description={patientLocation ? "Exact + compatible donors · sorted nearest first" : "Verified donors with completed health profiles"}
                     color="border-red-400 bg-gradient-to-r from-red-600 to-red-500 text-white"
                     collapsed={recommendedCollapsed} onToggle={() => setRecommendedCollapsed(!recommendedCollapsed)}
                   />
@@ -363,7 +346,6 @@ export default function SearchDonors() {
                 </div>
               )}
 
-              {/* Normal Donors */}
               {normalCount > 0 && (
                 <div>
                   <SectionHeader
@@ -391,16 +373,14 @@ export default function SearchDonors() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No donors found</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">Try a different blood group or remove filters.</p>
-              <button onClick={handleReset} className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium text-sm">
-                Clear Filters
-              </button>
+              <button onClick={handleReset} className="px-6 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium text-sm">Clear Filters</button>
             </motion.div>
           )
         ) : !searched && (
           <div className="text-center py-16">
             <div className="flex flex-wrap justify-center gap-3 mb-8">
               {[
-                { icon: FiMap, label: 'Hospital Picker', desc: 'Search & pin your hospital on map', color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' },
+                { icon: FiDroplet, label: 'Compatible Matching', desc: 'Shows donors who can safely donate to your blood group', color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' },
                 { icon: FiAward, label: 'Fully Verified', desc: 'Donated before + all eligibility checks', color: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' },
                 { icon: FiNavigation, label: 'Distance Sorted', desc: 'Nearest donors shown first', color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' },
               ].map((item) => (

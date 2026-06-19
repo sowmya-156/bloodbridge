@@ -2,11 +2,10 @@
 import { motion } from 'framer-motion';
 import {
   FiPhone, FiMapPin, FiCalendar, FiUser,
-  FiCheckCircle, FiXCircle, FiAward, FiShield, FiNavigation,
+  FiCheckCircle, FiXCircle, FiAward, FiShield, FiNavigation, FiDroplet,
 } from 'react-icons/fi';
 import { BLOOD_GROUP_COLORS } from '../../utils/constants';
 import { computeDonorScore } from '../../utils/donorScoring';
-import { formatDistance } from '../../utils/distance';
 
 function VerificationBadge({ tier }) {
   if (tier === 'full') return (
@@ -22,16 +21,16 @@ function VerificationBadge({ tier }) {
   return null;
 }
 
-function DistanceBadge({ distanceKm }) {
-  if (distanceKm === null || distanceKm === undefined) return null;
-  const color = distanceKm <= 5
-    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
-    : distanceKm <= 15
-    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
+function BloodMatchBadge({ isExactMatch }) {
+  if (isExactMatch === undefined || isExactMatch === null) return null;
+  if (isExactMatch) return (
+    <div className="flex items-center gap-1 px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold border border-red-200 dark:border-red-800">
+      <FiDroplet size={11} /> Exact Match
+    </div>
+  );
   return (
-    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${color}`}>
-      <FiNavigation size={11} /> {formatDistance(distanceKm)}
+    <div className="flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs font-semibold border border-blue-200 dark:border-blue-800">
+      <FiDroplet size={11} /> Compatible Donor
     </div>
   );
 }
@@ -39,12 +38,6 @@ function DistanceBadge({ distanceKm }) {
 export default function DonorCard({ donor, index = 0, showBadge = true }) {
   const bgColor = BLOOD_GROUP_COLORS[donor.bloodGroup] || 'bg-gray-100 text-gray-700 border-gray-300';
   const { percentage, tier } = computeDonorScore(donor);
-
-  const lastDonation = donor.lastDonationDate
-    ? new Date(donor.lastDonationDate).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric'
-      })
-    : 'N/A';
 
   const tierBorder = tier === 'full'
     ? 'border-green-200 dark:border-green-900/40'
@@ -84,6 +77,7 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
 
       <div className="flex flex-wrap gap-2 mb-3">
         {showBadge && <VerificationBadge tier={tier} />}
+        <BloodMatchBadge isExactMatch={donor.isExactBloodMatch} />
       </div>
 
       <div className="space-y-2 mb-3">
@@ -93,13 +87,8 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         </div>
         {donor.distanceKm !== null && donor.distanceKm !== undefined ? (
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
-            <FiNavigation size={13} className={`shrink-0 ${donor.usingLiveLocation ? 'animate-pulse' : ''}`} />
+            <FiNavigation size={13} className="shrink-0" />
             <span>{donor.distanceKm} km away</span>
-            {donor.usingLiveLocation && (
-              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
-                🟢 Live
-              </span>
-            )}
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -126,9 +115,7 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         <div className={`flex items-center gap-1.5 text-xs font-medium ${
           donor.isAvailable ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'
         }`}>
-          {donor.isAvailable
-            ? <><FiCheckCircle size={13} /> Available</>
-            : <><FiXCircle size={13} /> Not Available</>}
+          {donor.isAvailable ? <><FiCheckCircle size={13} /> Available</> : <><FiXCircle size={13} /> Not Available</>}
         </div>
         {donor.isAvailable && (
           <a href={`tel:${donor.phone}`}
