@@ -96,7 +96,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* Team */}
+      {/* Team - commented out
       <section className="py-14 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-10">Meet the Team</h2>
@@ -119,6 +119,7 @@ export default function About() {
           </div>
         </div>
       </section>
+      */}
 
       {/* CTA */}
       <section className="py-14 bg-gradient-to-r from-red-800 to-red-600 px-4">
