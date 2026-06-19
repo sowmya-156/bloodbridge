@@ -175,7 +175,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* Stats - commented out
       <section className="py-12 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -198,6 +198,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      */}
 
       {/* Features */}
       <section className="py-16 dark:bg-gray-950">
