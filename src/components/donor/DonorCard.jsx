@@ -87,8 +87,13 @@ export default function DonorCard({ donor, index = 0, showBadge = true }) {
         </div>
         {donor.distanceKm !== null && donor.distanceKm !== undefined ? (
           <div className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
-            <FiNavigation size={13} className="shrink-0" />
+            <FiNavigation size={13} className={`shrink-0 ${donor.usingLiveLocation ? 'animate-pulse' : ''}`} />
             <span>{donor.distanceKm} km away</span>
+            {donor.usingLiveLocation && (
+              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
+                🟢 Live
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">

@@ -105,17 +105,46 @@ export default function SearchDonors() {
   };
 
   const attachDistances = async (donors, patCoords) => {
-    if (!patCoords) return donors.map((d) => ({ ...d, distanceKm: null }));
-    return await Promise.all(donors.map(async (d) => {
-      if (d.lat && d.lng) {
-        return { ...d, distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.lat, d.lng) };
+    if (!patCoords) return donors.map((d) => ({ ...d, distanceKm: null, usingLiveLocation: false }));
+    const results = [];
+    for (const d of donors) {
+      // 1. Use live location if active and updated within last 5 mins
+      if (d.isLiveLocationActive && d.liveLat && d.liveLng) {
+        const updatedAt = d.liveLocationUpdatedAt ? new Date(d.liveLocationUpdatedAt) : null;
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        if (updatedAt && updatedAt > fiveMinutesAgo) {
+          results.push({
+            ...d,
+            distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.liveLat, d.liveLng),
+            usingLiveLocation: true,
+          });
+          continue;
+        }
       }
+      // 2. Fall back to registered home location
+      if (d.lat && d.lng) {
+        results.push({
+          ...d,
+          distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, d.lat, d.lng),
+          usingLiveLocation: false,
+        });
+        continue;
+      }
+      // 3. Fall back to geocoded city
       if (d.city) {
         const donorCoords = await geocodeCity(d.city);
-        if (donorCoords) return { ...d, distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, donorCoords.lat, donorCoords.lng) };
+        if (donorCoords) {
+          results.push({
+            ...d,
+            distanceKm: getDistanceKm(patCoords.lat, patCoords.lng, donorCoords.lat, donorCoords.lng),
+            usingLiveLocation: false,
+          });
+          continue;
+        }
       }
-      return { ...d, distanceKm: null };
-    }));
+      results.push({ ...d, distanceKm: null, usingLiveLocation: false });
+    }
+    return results;
   };
 
   const handleSearch = async () => {
