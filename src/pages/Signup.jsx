@@ -1,5 +1,5 @@
 // src/pages/Signup.jsx
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiLock, FiDroplet, FiEye, FiEyeOff } from 'react-icons/fi';
@@ -14,7 +14,10 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handle = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  // Fix: stable handler + functional update prevents focus loss while typing
+  const handleChange = useCallback((field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
 
   const validate = () => {
     const errs = {};
@@ -46,30 +49,11 @@ export default function Signup() {
     }
   };
 
-  const Field = ({ field, label, type = 'text', icon: Icon, placeholder, extra }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{label}</label>
-      <div className="relative">
-        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input
-          type={field === 'password' || field === 'confirm' ? (showPass ? 'text' : 'password') : type}
-          value={form[field]}
-          onChange={handle(field)}
-          placeholder={placeholder}
-          className={`w-full pl-10 ${extra ? 'pr-11' : 'pr-4'} py-3 rounded-xl border ${errors[field] ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'} bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
-        />
-        {extra}
-      </div>
-      {errors[field] && <p className="mt-1 text-xs text-red-500">{errors[field]}</p>}
-    </div>
-  );
-
   return (
     <div className="min-h-screen flex dark:bg-gray-950">
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-red-900 via-red-700 to-red-500 items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}
-        />
+          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         <div className="relative text-white text-center max-w-md">
           <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8 backdrop-blur-sm border border-white/30">
             <FiDroplet size={36} />
@@ -102,8 +86,39 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <Field field="name" label="Full Name" icon={FiUser} placeholder="John Doe" />
-            <Field field="email" label="Email Address" type="email" icon={FiMail} placeholder="you@example.com" />
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+              <div className="relative">
+                <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="John Doe"
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border ${errors.name ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'} bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
+                />
+              </div>
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+              <div className="relative">
+                <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  placeholder="you@example.com"
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border ${errors.email ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'} bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
+                />
+              </div>
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+            </div>
+
+            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
               <div className="relative">
@@ -111,7 +126,7 @@ export default function Signup() {
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
-                  onChange={handle('password')}
+                  onChange={(e) => handleChange('password', e.target.value)}
                   placeholder="Min. 6 characters"
                   className={`w-full pl-10 pr-11 py-3 rounded-xl border ${errors.password ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'} bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
                 />
@@ -121,6 +136,8 @@ export default function Signup() {
               </div>
               {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
+
+            {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
               <div className="relative">
@@ -128,7 +145,7 @@ export default function Signup() {
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={form.confirm}
-                  onChange={handle('confirm')}
+                  onChange={(e) => handleChange('confirm', e.target.value)}
                   placeholder="Re-enter password"
                   className={`w-full pl-10 pr-4 py-3 rounded-xl border ${errors.confirm ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-700 focus:ring-red-500'} bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all`}
                 />
