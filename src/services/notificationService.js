@@ -7,7 +7,8 @@ import { COMPATIBLE_DONORS_FOR } from '../utils/donorScoring';
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-const NOTIFY_RADIUS_KM = 11;
+// Notifications now go to ALL available, blood-compatible donors — no distance cutoff.
+// Distance is still calculated (when possible) purely to show "X km away" in the email.
 
 const getDonorCoords = async (donor) => {
   if (donor.isLiveLocationActive && donor.liveLat && donor.liveLng) {
@@ -40,7 +41,7 @@ const sendEmailToDonor = async (donor, request, distanceKm) => {
       hospital_name: request.hospitalName,
       city: request.city,
       urgency: request.urgency,
-      distance: distanceKm.toFixed(1),
+      distance: distanceKm !== null && distanceKm !== undefined ? distanceKm.toFixed(1) : 'N/A',
       contact_number: request.contactNumber,
     }, PUBLIC_KEY);
     return true;
@@ -57,8 +58,8 @@ const isCompatible = (donorGroup, neededGroup) => {
 
 export const notifyNearbyDonors = async (request) => {
   try {
+    // Hospital coords are used only to compute an informational distance — not a requirement to send.
     const hospitalCoords = await getHospitalCoords(request);
-    if (!hospitalCoords) return { notified: 0, skipped: 0 };
 
     const allDonors = await getAllDonors();
     // Includes both exact match AND blood-compatible donors (e.g. O- for O+ request)
@@ -68,16 +69,17 @@ export const notifyNearbyDonors = async (request) => {
 
     let notified = 0, skipped = 0;
     for (const donor of matchingDonors) {
-      const donorCoords = await getDonorCoords(donor);
-      if (!donorCoords) { skipped++; continue; }
-      const distanceKm = getDistanceKm(hospitalCoords.lat, hospitalCoords.lng, donorCoords.lat, donorCoords.lng);
-      if (distanceKm !== null && distanceKm <= NOTIFY_RADIUS_KM) {
-        const sent = await sendEmailToDonor(donor, request, distanceKm);
-        if (sent) notified++; else skipped++;
-        await new Promise((r) => setTimeout(r, 300));
-      } else {
-        skipped++;
+      // Try to resolve a distance just for display in the email — never used to skip a donor.
+      let distanceKm = null;
+      if (hospitalCoords) {
+        const donorCoords = await getDonorCoords(donor);
+        if (donorCoords) {
+          distanceKm = getDistanceKm(hospitalCoords.lat, hospitalCoords.lng, donorCoords.lat, donorCoords.lng);
+        }
       }
+      const sent = await sendEmailToDonor(donor, request, distanceKm);
+      if (sent) notified++; else skipped++;
+      await new Promise((r) => setTimeout(r, 300));
     }
     return { notified, skipped };
   } catch (err) {
