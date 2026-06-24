@@ -85,14 +85,14 @@ export default function EmergencyRequests() {
       setErrors({});
       toast.success('Emergency request posted!');
 
-      // Notify nearby donors
-      toast.loading('Notifying nearby donors...', { id: 'notify' });
+      // Notify all available, blood-compatible donors
+      toast.loading('Notifying available donors...', { id: 'notify' });
       const { notified } = await notifyNearbyDonors(form);
       toast.dismiss('notify');
       if (notified > 0) {
-        toast.success(`📧 ${notified} nearby donor${notified > 1 ? 's' : ''} notified!`);
+        toast.success(`📧 ${notified} available donor${notified > 1 ? 's' : ''} notified!`);
       } else {
-        toast('No donors found within 11km to notify.', { icon: 'ℹ️' });
+        toast('No available donors found to notify.', { icon: 'ℹ️' });
       }
     } catch {
       toast.error('Failed to post request. Please try again.');
@@ -346,7 +346,7 @@ export default function EmergencyRequests() {
                   <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
                     <span className="text-blue-600 dark:text-blue-400 text-sm">📧</span>
                     <p className="text-xs text-blue-700 dark:text-blue-300">
-                      All available donors within <strong>11km</strong> will be automatically notified by email when you post this request.
+                      All available, blood-compatible donors will be automatically notified by email when you post this request.
                     </p>
                   </div>
 
