@@ -16,7 +16,7 @@ import { logoutUser } from '../services/authService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useLiveLocation } from '../hooks/useLiveLocation';
-
+import DonationCooldownCard from '../components/common/DonationCooldownCard';
 // Verification badge
 function TierBadge({ tier }) {
   if (tier === 'full') return (
