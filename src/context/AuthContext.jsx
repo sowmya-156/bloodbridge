@@ -24,7 +24,6 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = useCallback(async () => {
     if (!auth.currentUser) return;
     await reload(auth.currentUser);
-    // Force a re-render with the refreshed user object
     setUser({ ...auth.currentUser });
   }, []);
 

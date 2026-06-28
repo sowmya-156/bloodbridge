@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiLock, FiDroplet, FiEye, FiEyeOff } from 'react-icons/fi';
-import { registerUser } from '../services/authService';
+import { registerUser, logoutUser } from '../services/authService';
 import { validateEmail, validatePassword } from '../utils/validators';
 import toast from 'react-hot-toast';
 
@@ -37,10 +37,14 @@ export default function Signup() {
     setLoading(true);
     try {
       await registerUser(form.email, form.password, form.name);
-      toast.success('Account created! Please verify your email to continue.');
-      // Send them to a dedicated screen explaining the verification step,
-      // rather than straight into the Dashboard.
-      navigate('/verify-email');
+      // Firebase signs the new user in automatically right after creating the
+      // account. We don't want that — no session should be usable until the
+      // email link is clicked — so we immediately sign back out here.
+      await logoutUser();
+      toast.success('Account created! Please check your email to verify before signing in.');
+      // Pass the email along so the verify-email screen can show it and
+      // resend to the right address even though there's no active session.
+      navigate('/verify-email', { state: { email: form.email } });
     } catch (err) {
       const msg = err.code === 'auth/email-already-in-use'
         ? 'Email already in use. Please login.'

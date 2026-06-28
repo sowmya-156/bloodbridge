@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/layout/Navbar';
-import VerifyEmailBanner from './components/common/VerifyEmailBanner';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Home from './pages/Home';
@@ -23,7 +22,6 @@ function Layout({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <VerifyEmailBanner />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>

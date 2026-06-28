@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiMail, FiLock, FiDroplet, FiEye, FiEyeOff } from 'react-icons/fi';
@@ -7,23 +7,33 @@ import { loginUser } from '../services/authService';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
 
+  const handleChange = useCallback((field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) { toast.error('Please fill in all fields'); return; }
+    if (!form.email || !form.password) { toast.error('Please fill in all fields'); return; }
     setLoading(true);
     try {
-      await loginUser(email, password);
+      await loginUser(form.email, form.password);
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (err) {
+      if (err.code === 'auth/email-not-verified') {
+        // Account exists and password was correct, but the email link hasn't
+        // been clicked yet — send them to the verify screen, not an error toast.
+        toast.error('Please verify your email before signing in.');
+        navigate('/verify-email', { state: { email: form.email } });
+        return;
+      }
       const msg = err.code === 'auth/invalid-credential' ? 'Invalid email or password.' :
                   err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again later.' :
                   'Login failed. Please try again.';
@@ -35,11 +45,9 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex dark:bg-gray-950">
-      {/* Left decorative panel */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-red-900 via-red-700 to-red-500 items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}
-        />
+          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         <div className="relative text-white text-center max-w-md">
           <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8 backdrop-blur-sm border border-white/30">
             <FiDroplet size={36} />
@@ -51,7 +59,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Form */}
       <div className="flex-1 flex items-center justify-center p-6 bg-white dark:bg-gray-950">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -79,8 +86,8 @@ export default function Login() {
                 <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={form.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
                   placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 />
@@ -96,8 +103,8 @@ export default function Login() {
                 <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={form.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-11 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 />
