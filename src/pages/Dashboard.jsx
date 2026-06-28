@@ -17,6 +17,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { useLiveLocation } from '../hooks/useLiveLocation';
 import DonationCooldownCard from '../components/common/DonationCooldownCard';
+
 // Verification badge
 function TierBadge({ tier }) {
   if (tier === 'full') return (
@@ -65,15 +66,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
 
+  const loadDonor = async () => {
+    try {
+      const data = await getDonorByUserId(user.uid);
+      setDonor(data);
+    } catch { toast.error('Could not load profile data.'); }
+    finally { setLoading(false); }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getDonorByUserId(user.uid);
-        setDonor(data);
-      } catch { toast.error('Could not load profile data.'); }
-      finally { setLoading(false); }
-    };
-    load();
+    loadDonor();
   }, [user]);
 
   const handleToggleAvailability = async () => {
@@ -237,6 +239,11 @@ export default function Dashboard() {
                       : 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
                     {toggling ? 'Updating...' : donor.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
                   </button>
+                </div>
+
+                {/* 56-day donation cooldown — mark as donated today / countdown */}
+                <div className="mb-5">
+                  <DonationCooldownCard donor={donor} onUpdated={loadDonor} />
                 </div>
 
                 {/* Actions */}
