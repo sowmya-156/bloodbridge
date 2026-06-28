@@ -1,7 +1,7 @@
 // src/context/AuthContext.jsx
 // Global authentication state context
-import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { onAuthStateChanged, reload } from 'firebase/auth';
 import { auth } from '../services/firebase';
 
 const AuthContext = createContext(null);
@@ -18,8 +18,20 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  // Call this after the user clicks the verification link in their email,
+  // then comes back to the app — Firebase doesn't push emailVerified changes
+  // live, so we have to explicitly reload the user object.
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser) return;
+    await reload(auth.currentUser);
+    // Force a re-render with the refreshed user object
+    setUser({ ...auth.currentUser });
+  }, []);
+
+  const isEmailVerified = !!user?.emailVerified;
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, isEmailVerified, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

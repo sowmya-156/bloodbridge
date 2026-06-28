@@ -3,11 +3,13 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/layout/Navbar';
+import VerifyEmailBanner from './components/common/VerifyEmailBanner';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import VerifyEmail from './pages/VerifyEmail';
 import RegisterDonor from './pages/RegisterDonor';
 import SearchDonors from './pages/SearchDonors';
 import EmergencyRequests from './pages/EmergencyRequests';
@@ -21,6 +23,7 @@ function Layout({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
+      <VerifyEmailBanner />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
@@ -44,6 +47,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/about" element={<Layout><About /></Layout>} />
             <Route path="/contact" element={<Layout><Contact /></Layout>} />

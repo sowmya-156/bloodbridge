@@ -14,7 +14,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Fix: stable handler + functional update prevents focus loss while typing
+  // Stable handler + functional update prevents focus loss while typing
   const handleChange = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -37,8 +37,10 @@ export default function Signup() {
     setLoading(true);
     try {
       await registerUser(form.email, form.password, form.name);
-      toast.success('Account created! Welcome to BloodBridge.');
-      navigate('/dashboard');
+      toast.success('Account created! Please verify your email to continue.');
+      // Send them to a dedicated screen explaining the verification step,
+      // rather than straight into the Dashboard.
+      navigate('/verify-email');
     } catch (err) {
       const msg = err.code === 'auth/email-already-in-use'
         ? 'Email already in use. Please login.'
@@ -86,7 +88,6 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
               <div className="relative">
@@ -102,7 +103,6 @@ export default function Signup() {
               {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
               <div className="relative">
@@ -118,7 +118,6 @@ export default function Signup() {
               {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
               <div className="relative">
@@ -137,7 +136,6 @@ export default function Signup() {
               {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
               <div className="relative">
